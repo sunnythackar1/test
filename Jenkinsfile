@@ -4,7 +4,7 @@ pipeline {
         AWS_ACCESS_KEY_ID = 'AKIARYEUCL43WCN3O4JJ'
         AWS_SECRET_ACCESS_KEY = 'v3VogI6skuk1k7qrhcoLtmFgRIBLbWjLUsI/6ki9'
         AWS_REGION = 'us-east-1'  // Change to your region
-        DB_INSTANCE = 'test'
+        OLD_DB_INSTANCE = 'test'
         NEW_DB_INSTANCE = 'test1'
         SNAPSHOT_NAME = "test-snapshot-${UUID.randomUUID().toString()}"
     }
