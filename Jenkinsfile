@@ -8,22 +8,24 @@ pipeline {
         NEW_DB_INSTANCE = 'test1'
     }
     stages {
-        stage('Configure AWS CLI') {
+        stage('Validate AWS CLI') {
             steps {
                 script {
-                    sh """
-                        aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-                        aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-                        aws configure set region $AWS_REGION
-                    """
+                    sh 'aws --version'
                 }
             }
         }
-
         stage('Modify Database Name') {
             steps {
                 script {
                     sh "aws rds modify-db-instance --db-instance-identifier ${OLD_DB_INSTANCE} --new-db-instance-identifier ${NEW_DB_INSTANCE} --apply-immediately"
+                }
+            }
+        }
+        stage('Wait for Database Rename to Complete') {
+            steps {
+                script {
+                    sh "aws rds wait db-instance-available --db-instance-identifier ${NEW_DB_INSTANCE}"
                 }
             }
         }
