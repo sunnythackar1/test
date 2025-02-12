@@ -6,7 +6,6 @@ pipeline {
         AWS_REGION = 'us-east-1'  // Change to your region
         OLD_DB_INSTANCE = 'test'
         NEW_DB_INSTANCE = 'test1'
-        SNAPSHOT_NAME = "test-snapshot-${UUID.randomUUID().toString()}"
     }
     stages {
         stage('Configure AWS CLI') {
