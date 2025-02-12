@@ -27,13 +27,6 @@ pipeline {
                 }
             }
         }
-        stage('Wait for Modification to Complete') {
-            steps {
-                script {
-                    sh "aws rds wait db-instance-available --db-instance-identifier ${NEW_DB_INSTANCE}"
-                }
-            }
-        }
         stage('Verify New Database Name') {
             steps {
                 script {
