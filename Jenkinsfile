@@ -25,7 +25,16 @@ pipeline {
         stage('Wait for Database Rename to Complete') {
             steps {
                 script {
-                    sh "aws rds wait db-instance-available --db-instance-identifier ${NEW_DB_INSTANCE}"
+                    def renamed = false
+                    while (!renamed) {
+                        def result = sh(script: "aws rds describe-db-instances --db-instance-identifier ${OLD_DB_INSTANCE} || aws rds describe-db-instances --db-instance-identifier ${NEW_DB_INSTANCE}", returnStatus: true)
+                        if (result == 0) {
+                            renamed = true
+                        } else {
+                            echo "Waiting for database rename to complete..."
+                            sleep 30
+                        }
+                    }
                 }
             }
         }
