@@ -6,6 +6,7 @@ pipeline {
         AWS_REGION = 'us-east-1'  // Change to your region
         OLD_DB_INSTANCE = 'test'
         NEW_DB_INSTANCE = 'test1'
+        SNAPSHOT_NAME = 'test-snapshot-1881dacd-47ab-43fe-9350-e4c345057f0b'
         RETRY_COUNT = 10  // Number of retries for waiting
         SLEEP_TIME = 30   // Time in seconds between retries
     }
@@ -71,6 +72,51 @@ pipeline {
 
                     if (!dbAvailable) {
                         error "ERROR: '${NEW_DB_INSTANCE}' did not become available in time!"
+                    }
+                }
+            }
+        }
+
+        stage('Create DB Instance from Snapshot') {
+            steps {
+                script {
+                    echo "Creating new RDS instance '${OLD_DB_INSTANCE}' from snapshot '${SNAPSHOT_NAME}'"
+                    def createResult = sh(script: """
+                        aws rds restore-db-instance-from-db-snapshot \
+                        --db-instance-identifier ${OLD_DB_INSTANCE} \
+                        --db-snapshot-identifier ${SNAPSHOT_NAME} \
+                        --region ${AWS_REGION}
+                    """, returnStdout: true).trim()
+                    echo "Create Response: ${createResult}"
+                }
+            }
+        }
+
+        stage('Wait for Database Creation to Complete') {
+            steps {
+                script {
+                    def retries = 0
+                    def dbAvailable = false
+
+                    while (retries < env.RETRY_COUNT.toInteger()) {
+                        def dbStatus = sh(script: """
+                            aws rds describe-db-instances --db-instance-identifier ${OLD_DB_INSTANCE} \
+                            --query 'DBInstances[0].DBInstanceStatus' --output text 2>/dev/null || echo "not_found"
+                        """, returnStdout: true).trim()
+
+                        if (dbStatus == "available") {
+                            echo "New DB instance '${OLD_DB_INSTANCE}' restored from snapshot and is now available!"
+                            dbAvailable = true
+                            break
+                        }
+
+                        echo "Waiting for '${OLD_DB_INSTANCE}' to become available... Retrying in ${env.SLEEP_TIME} seconds (${retries + 1}/${env.RETRY_COUNT})"
+                        sleep env.SLEEP_TIME.toInteger()
+                        retries++
+                    }
+
+                    if (!dbAvailable) {
+                        error "ERROR: '${OLD_DB_INSTANCE}' did not become available in time!"
                     }
                 }
             }
