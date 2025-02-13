@@ -7,7 +7,7 @@ pipeline {
         OLD_DB_INSTANCE = 'test'
         NEW_DB_INSTANCE = 'test1'
         SNAPSHOT_NAME = 'test-snapshot-1881dacd-47ab-43fe-9350-e4c345057f0b'
-        RETRY_COUNT = 10  // Number of retries for waiting
+        RETRY_COUNT = 20  // Number of retries for waiting
         SLEEP_TIME = 30   // Time in seconds between retries
     }
     stages {
