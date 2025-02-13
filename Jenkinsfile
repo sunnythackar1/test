@@ -4,21 +4,19 @@ pipeline {
         AWS_REGION = 'us-east-1'  // Change to your region
         OLD_DB_INSTANCE = 'test'
         NEW_DB_INSTANCE = 'test1'
-        RETRY_COUNT = 10
-        SLEEP_TIME = 30
+        RETRY_COUNT = 20  // Number of retries for waiting
+        SLEEP_TIME = 30   // Time in seconds between retries
     }
     stages {
         stage('Modify DB Instance Name') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-credentials']]) {
-                    script {
-                        echo "Renaming RDS instance from ${OLD_DB_INSTANCE} to ${NEW_DB_INSTANCE}"
-                        def modifyResult = sh(script: """
-                            aws rds modify-db-instance --db-instance-identifier ${OLD_DB_INSTANCE} \
-                            --new-db-instance-identifier ${NEW_DB_INSTANCE} --apply-immediately
-                        """, returnStdout: true).trim()
-                        echo "Modify Response: ${modifyResult}"
-                    }
+                script {
+                    echo "Renaming RDS instance from ${OLD_DB_INSTANCE} to ${NEW_DB_INSTANCE}"
+                    def modifyResult = sh(script: """
+                        aws rds modify-db-instance --db-instance-identifier ${OLD_DB_INSTANCE} \
+                        --new-db-instance-identifier ${NEW_DB_INSTANCE} --apply-immediately
+                    """, returnStdout: true).trim()
+                    echo "Modify Response: ${modifyResult}"
                 }
             }
         }
