@@ -6,8 +6,7 @@ pipeline {
         AWS_REGION = 'us-east-1'  // Change to your region
         OLD_DB_INSTANCE = 'test'
         NEW_DB_INSTANCE = 'test1'
-        SNAPSHOT_NAME = 'test-snapshot-1881dacd-47ab-43fe-9350-e4c345057f0b'
-        RETRY_COUNT = 20  // Number of retries for waiting
+        RETRY_COUNT = 10  // Number of retries for waiting
         SLEEP_TIME = 30   // Time in seconds between retries
     }
     stages {
@@ -77,14 +76,34 @@ pipeline {
             }
         }
 
+        stage('Retrieve Latest Snapshot') {
+            steps {
+                script {
+                    echo "Fetching latest manual snapshot for '${OLD_DB_INSTANCE}'"
+                    def latestSnapshot = sh(script: """
+                        aws rds describe-db-snapshots --snapshot-type manual \
+                        --query \"sort_by(DBSnapshots[?starts_with(DBSnapshotIdentifier, 'test')], &SnapshotCreateTime)[-1].DBSnapshotIdentifier\" \
+                        --output text
+                    """, returnStdout: true).trim()
+
+                    if (!latestSnapshot || latestSnapshot == "None") {
+                        error "ERROR: No manual snapshots found for '${OLD_DB_INSTANCE}'"
+                    }
+
+                    env.SNAPSHOT_NAME = latestSnapshot
+                    echo "Latest snapshot found: ${env.SNAPSHOT_NAME}"
+                }
+            }
+        }
+
         stage('Create DB Instance from Snapshot') {
             steps {
                 script {
-                    echo "Creating new RDS instance '${OLD_DB_INSTANCE}' from snapshot '${SNAPSHOT_NAME}'"
+                    echo "Creating new RDS instance '${OLD_DB_INSTANCE}' from snapshot '${env.SNAPSHOT_NAME}'"
                     def createResult = sh(script: """
                         aws rds restore-db-instance-from-db-snapshot \
                         --db-instance-identifier ${OLD_DB_INSTANCE} \
-                        --db-snapshot-identifier ${SNAPSHOT_NAME} \
+                        --db-snapshot-identifier ${env.SNAPSHOT_NAME} \
                         --region ${AWS_REGION}
                     """, returnStdout: true).trim()
                     echo "Create Response: ${createResult}"
@@ -118,6 +137,20 @@ pipeline {
                     if (!dbAvailable) {
                         error "ERROR: '${OLD_DB_INSTANCE}' did not become available in time!"
                     }
+                }
+            }
+        }
+
+        stage('Delete Old Database') {
+            steps {
+                script {
+                    echo "Deleting old database instance '${NEW_DB_INSTANCE}'"
+                    def deleteResult = sh(script: """
+                        aws rds delete-db-instance \
+                        --db-instance-identifier ${NEW_DB_INSTANCE} \
+                        --skip-final-snapshot --region ${AWS_REGION}
+                    """, returnStdout: true).trim()
+                    echo "Delete Response: ${deleteResult}"
                 }
             }
         }
